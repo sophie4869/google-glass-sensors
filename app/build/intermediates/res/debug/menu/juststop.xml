@@ -6,4 +6,4 @@
         android:title="@string/stop"
         android:icon="@drawable/ic_stop" />        
 </menu>
-<!-- From: file:/Users/Ethanator/AndroidStudioProjects/MobileHealth/LocationSensors/app/src/main/res/menu/juststop.xml -->
+<!-- From: file:/Users/sophie/google-glass-sensors/app/src/main/res/menu/juststop.xml -->

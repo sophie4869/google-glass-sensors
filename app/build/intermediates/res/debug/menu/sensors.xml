@@ -29,4 +29,4 @@
         android:id="@+id/rotationvector"
         android:title="@string/rotationvector"/>
 
-</menu><!-- From: file:/Users/Ethanator/AndroidStudioProjects/MobileHealth/LocationSensors/app/src/main/res/menu/sensors.xml -->
+</menu><!-- From: file:/Users/sophie/google-glass-sensors/app/src/main/res/menu/sensors.xml -->

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- From: file:/Users/Ethanator/AndroidStudioProjects/MobileHealth/LocationSensors/app/src/main/res/values/colors.xml -->
+    <!-- From: file:/Users/sophie/google-glass-sensors/app/src/main/res/values/colors.xml -->
     <eat-comment/>
     <color name="black">#ff000000</color>
-    <!-- From: file:/Users/Ethanator/AndroidStudioProjects/MobileHealth/LocationSensors/app/src/main/res/values/strings.xml -->
+    <!-- From: file:/Users/sophie/google-glass-sensors/app/src/main/res/values/strings.xml -->
     <eat-comment/>
     <string name="accelerometer">ACCELEROMETER</string>
     <string name="address">ADDRESS</string>
@@ -25,7 +25,7 @@
     <string name="sensor">SENSORS</string>
     <string name="stop">STOP</string>
     <string name="tts">TTS</string>
-    <!-- From: file:/Users/Ethanator/AndroidStudioProjects/MobileHealth/LocationSensors/app/src/main/res/values/styles.xml -->
+    <!-- From: file:/Users/sophie/google-glass-sensors/app/src/main/res/values/styles.xml -->
     <eat-comment/>
     <style name="AppBaseTheme" parent="android:Theme.Light">
         <!--

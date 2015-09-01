@@ -1,12 +1,13 @@
 package com.morkout.locationsensors;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.sql.Timestamp;
 
 import android.app.Activity;
 import android.content.Context;
@@ -28,8 +29,19 @@ import android.widget.TextView;
 import com.google.android.glass.touchpad.Gesture;
 import com.google.android.glass.touchpad.GestureDetector;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import android.os.AsyncTask;
+
 public class SensorActivity extends Activity implements SensorEventListener {
 	private static final String TAG = "SensorActivity";
+	private static final String IP = "10.11.130.152";
+	private boolean flag = false;
 
 	private SensorManager mSensorManager;
 
@@ -63,13 +75,12 @@ public class SensorActivity extends Activity implements SensorEventListener {
 	float[] mRotationVector;
 
 	private final float[] mRotationMatrix = new float[16];
-	private GeomagneticField mGeomagneticField; 	
+	private GeomagneticField mGeomagneticField;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
-		setContentView(R.layout.sensor);        
+		setContentView(R.layout.sensor);
 		mTextView =  (TextView) findViewById(R.id.tvSensor);
 
 		lastUpdate = System.currentTimeMillis();
@@ -97,11 +108,6 @@ public class SensorActivity extends Activity implements SensorEventListener {
 		//mTextView.setText(allString);
 		Log.i(TAG, allString);
 
-		// MPL Gyroscope:4,MPL Accelerometer:1,MPL Magnetic Field:2,MPL Orientation:3,MPL Rotation Vector:11,
-		// MPL Linear Acceleration:10,MPL Gravity:9,LTR-506ALS Light sensor:5,Rotation Vector Sensor:11,Gravity Sensor:9,
-		// Linear Acceleration Sensor:10,Orientation Sensor:3,Corrected Gyroscope Sensor:4,
-		// - all supported by Glass
-		// http://developer.android.com/reference/android/hardware/Sensor.html has type constant (after name:) in Summary 
 
 		mSensorAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		mSensorGravity = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
@@ -127,7 +133,6 @@ public class SensorActivity extends Activity implements SensorEventListener {
 		});		
 
 	}
-
 
 	public boolean onGenericMotionEvent(MotionEvent event) {
 		if (mGestureDetector != null) {
@@ -218,9 +223,7 @@ public class SensorActivity extends Activity implements SensorEventListener {
 	}    	      
 
 
-	protected void onStart() {
-		super.onStart();
-	}
+
 
 	@Override
 	public final void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -229,54 +232,65 @@ public class SensorActivity extends Activity implements SensorEventListener {
 
 	private void writeSensorDataToFile(String sensorType, float data[]) {
 		final String user_id = "dev-001";
-		Log.d("Ethan", "Writing " + sensorType);
+		Log.d("Sophie", "Writing " + sensorType);
 		try {
-			File file = new File(Environment.getExternalStorageDirectory(), "glassSensorData.txt");
+			flag=true;
+			File file = new File(Environment.getExternalStorageDirectory(), "SensorData0.txt");
+			Log.d("Sophie", "file got");
 			FileOutputStream outputStream = new FileOutputStream(file, true);
+			String time = Long.toString(System.currentTimeMillis());
 			String content = user_id + "\t" + sensorType + "\t" + data[0] + "\t" + data[1] + "\t" + data[2] + "\t" +
-				Long.toString(System.currentTimeMillis() / 1000L) + "\n";
+				time + "\n";//
+			AsyncTask<String, Void, Void> execute = new SendPostTask().execute(sensorType, Float.toString(data[0]), Float.toString(data[1]), Float.toString(data[2]),
+							time);
+			Log.d("content", content);
 			outputStream.write(content.getBytes());
 			outputStream.close();
+			flag=false;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
+
+
+
+
 	@Override
 	public final void onSensorChanged(SensorEvent event) {
 		if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 			mAccelerometer = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[0].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[0].getTime() < 5) return;
 			writeSensorDataToFile("Accelerometer", mAccelerometer);
 			mSensorDataUpdatedTime[0] = new Date();
 		}
 		if (event.sensor.getType() == Sensor.TYPE_GRAVITY) {
 			mGravity = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[1].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[1].getTime() < 5) return;
 			writeSensorDataToFile("Gravity", mGravity);
 			mSensorDataUpdatedTime[1] = new Date();
 		}    			
 		if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 			mGyroscope = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[2].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[2].getTime() < 5) return;
 			writeSensorDataToFile("Gyroscope", mGyroscope);
 			mSensorDataUpdatedTime[2] = new Date();
 		}    	
 		if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
 			mLight = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[3].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[3].getTime() < 5) return;
 			writeSensorDataToFile("Light", mLight);
 			mSensorDataUpdatedTime[3] = new Date();
 		}
 		if (event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
 			mLinearAcceleration = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[4].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[4].getTime() < 5) return;
 			writeSensorDataToFile("LinearAcceleration", mLinearAcceleration);
 			mSensorDataUpdatedTime[4] = new Date();
 		}
 		if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
 			mMagneticField = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[5].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[5].getTime() < 5) return;
 			writeSensorDataToFile("MagneticField", mMagneticField);
 			mSensorDataUpdatedTime[5] = new Date();
 		}
@@ -292,14 +306,14 @@ public class SensorActivity extends Activity implements SensorEventListener {
 				mOrientation[0] = 180 + (float) Math.toDegrees(mOrientation[0]);
 				mOrientation[1] = 90 + (float) Math.toDegrees(mOrientation[1]);
 				mOrientation[2] = (float) Math.toDegrees(mOrientation[2]);
-				if (new Date().getTime() - mSensorDataUpdatedTime[6].getTime() < 50) return;
+				if (new Date().getTime() - mSensorDataUpdatedTime[6].getTime() < 5) return;
 				writeSensorDataToFile("Orientation", mOrientation);
 				mSensorDataUpdatedTime[6] = new Date();
 			}
 		}   
 		if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
 			mRotationVector = event.values.clone();
-			if (new Date().getTime() - mSensorDataUpdatedTime[7].getTime() < 50) return;
+			if (new Date().getTime() - mSensorDataUpdatedTime[7].getTime() < 5) return;
 			writeSensorDataToFile("RotationVector", mRotationVector);
 			mSensorDataUpdatedTime[7] = new Date();
 		}
@@ -310,13 +324,13 @@ public class SensorActivity extends Activity implements SensorEventListener {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-		mSensorManager.registerListener(this, mSensorGravity, SensorManager.SENSOR_DELAY_NORMAL);
-		mSensorManager.registerListener(this, mSensorGyroscope, SensorManager.SENSOR_DELAY_NORMAL);
-		mSensorManager.registerListener(this, mSensorLight, SensorManager.SENSOR_DELAY_NORMAL);
-		mSensorManager.registerListener(this, mSensorLinearAcceleration, SensorManager.SENSOR_DELAY_NORMAL);
-		mSensorManager.registerListener(this, mSensorMagneticField, SensorManager.SENSOR_DELAY_NORMAL);
-		mSensorManager.registerListener(this, mSensorRotationVector, SensorManager.SENSOR_DELAY_NORMAL);
+		mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+		mSensorManager.registerListener(this, mSensorGravity, SensorManager.SENSOR_DELAY_FASTEST);
+		mSensorManager.registerListener(this, mSensorGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
+		mSensorManager.registerListener(this, mSensorLight, SensorManager.SENSOR_DELAY_FASTEST);
+		mSensorManager.registerListener(this, mSensorLinearAcceleration, SensorManager.SENSOR_DELAY_FASTEST);
+		mSensorManager.registerListener(this, mSensorMagneticField, SensorManager.SENSOR_DELAY_FASTEST);
+		mSensorManager.registerListener(this, mSensorRotationVector, SensorManager.SENSOR_DELAY_FASTEST);
 
 		Date initTime = new Date();
 		mSensorDataUpdatedTime = new Date[8];
@@ -346,7 +360,7 @@ public class SensorActivity extends Activity implements SensorEventListener {
 		//Log.i(TAG, ""+accelationSquareRoot);
 		if (accelation >= 1.2) // 2 is a big movement of head on Glass! 1 is too sensitive. 1.2 is a good one.
 		{
-			if (actualTime - lastUpdate < 200) {
+			if (actualTime - lastUpdate < 20) {
 				return;
 			}
 			lastUpdate = actualTime;
@@ -411,7 +425,69 @@ public class SensorActivity extends Activity implements SensorEventListener {
 		} else {
 			return heading;
 		}
-	}	
+	}
+
+
+
+
+	private class SendPostTask extends AsyncTask<String, Void, Void> {
+
+		@Override
+		protected Void doInBackground(String... params) {
+			myRequestPost(params[0],  params[1],  params[2],  params[3], params[4]);
+			return null;
+		}
+		private int myRequestPost(String type, String x, String y, String z,String timestamp) {
+
+			int resultCode = 0;
+
+			String url = "http://"+IP+":8881/poSensorData.php";
+
+			HttpClient client = new DefaultHttpClient();
+			HttpPost post = new HttpPost(url);
+
+			List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+//			nameValuePairs.add(new BasicNameValuePair("", user_id));
+			nameValuePairs.add(new BasicNameValuePair("type", type));
+			nameValuePairs.add(new BasicNameValuePair("x", x));
+			nameValuePairs.add(new BasicNameValuePair("y", y));
+			nameValuePairs.add(new BasicNameValuePair("z", z));
+			String time_real = Long.toString(System.currentTimeMillis());//  /1000L
+			nameValuePairs.add(new BasicNameValuePair("time", timestamp));
+			nameValuePairs.add(new BasicNameValuePair("time_real", time_real));
+
+
+
+			try {
+				post.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+
+				HttpResponse response = client.execute(post);
+				System.out.println("\nSending 'POST' request to URL : " + url);
+				System.out.println("Post parameters : " + post.getEntity());
+				System.out.println("Response Code : " +
+						response.getStatusLine().getStatusCode());
+
+				resultCode = response.getStatusLine().getStatusCode();
+				BufferedReader rd = new BufferedReader(
+						new InputStreamReader(response.getEntity().getContent()));
+
+				StringBuffer result = new StringBuffer();
+				String line = "";
+				while ((line = rd.readLine()) != null) {
+					result.append(line);
+				}
+
+				System.out.println(result.toString());
+			} catch (Exception e) {
+				Log.e("POST", e.getMessage());
+			}
+
+			return resultCode;
+		}
+		protected void onPostExecute(Void result) {
+			Log.d("Sophie", "Posted sensor data");
+		}
+	}
 
 }
 
